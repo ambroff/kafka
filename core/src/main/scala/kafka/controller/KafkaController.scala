@@ -32,8 +32,8 @@ import kafka.zookeeper.{StateChangeHandler, ZNodeChangeHandler, ZNodeChildChange
 import org.apache.kafka.common.ElectionType
 import org.apache.kafka.common.KafkaException
 import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.errors.{BrokerNotAvailableException, ControllerMovedException, StaleBrokerEpochException}
-import org.apache.kafka.common.errors.PolicyViolationException
+import org.apache.kafka.common.config.TopicConfig
+import org.apache.kafka.common.errors.{BrokerNotAvailableException, ControllerMovedException, NotEnoughReplicasException, PolicyViolationException, StaleBrokerEpochException}
 import org.apache.kafka.common.metrics.Metrics
 import org.apache.kafka.common.protocol.Errors
 import org.apache.kafka.common.requests.{AbstractControlRequest, AbstractResponse, ApiError, LeaderAndIsrResponse}
@@ -1261,6 +1261,31 @@ class KafkaController(val config: KafkaConfig,
     controlledShutdownCallback(controlledShutdownResult)
   }
 
+  private def safeToShutdown(id: Int, brokerEpoch: Long): Boolean = {
+    val topicConfigs = adminZkClient.getAllTopicConfigs()
+
+    // If a topic doesn't have min.insync.replicas configured, default to 1
+    val defaultMinISR: Int = 1
+
+    val atRiskPartitions = controllerContext.partitionsOnBroker(id).filter { partition =>
+      // Look up minISR for this topic, or use the default if not configured.
+      val minISR: Int = topicConfigs.get(partition.topic()).map(_.get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG)) match {
+        case Some(minISR) => minISR.toString.toInt
+        case None => defaultMinISR
+      }
+
+      // See which replicas are known alive and not pending shutdown for this partition
+      val liveReplicas = controllerContext.partitionReplicaAssignment(partition).count( { replicaBrokerId =>
+        controllerContext.liveBrokerIdAndEpochs.contains(replicaBrokerId) && !controllerContext.shuttingDownBrokerIds.contains(replicaBrokerId)
+      })
+
+      // Consider this topic-partition at-risk if removing one broker will result in the ISR shrinking below minISR
+      (liveReplicas - 1) < minISR
+    }
+
+    atRiskPartitions.isEmpty
+  }
+
   private def doControlledShutdown(id: Int, brokerEpoch: Long): Set[TopicPartition] = {
     if (!isActive) {
       throw new ControllerMovedException("Controller moved to another broker. Aborting controlled shutdown")
@@ -1276,6 +1301,11 @@ class KafkaController(val config: KafkaConfig,
         info(stateBrokerEpochErrorMessage)
         throw new StaleBrokerEpochException(stateBrokerEpochErrorMessage)
       }
+    }
+
+    if (!safeToShutdown(id, brokerEpoch)) {
+      throw new NotEnoughReplicasException(
+        s"Broker id $id cannot initiate shutdown without an impact on topic availability.")
     }
 
     info(s"Shutting down broker $id")
