@@ -17,7 +17,6 @@
 package kafka.controller
 
 import java.util.concurrent.TimeUnit
-
 import com.yammer.metrics.core.Gauge
 import kafka.admin.{AdminOperationException, AdminUtils}
 import kafka.api._
@@ -32,6 +31,7 @@ import kafka.zookeeper.{StateChangeHandler, ZNodeChangeHandler, ZNodeChildChange
 import org.apache.kafka.common.ElectionType
 import org.apache.kafka.common.KafkaException
 import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.cache.BoundedTimedCache
 import org.apache.kafka.common.config.TopicConfig
 import org.apache.kafka.common.errors.{BrokerNotAvailableException, ControllerMovedException, NotEnoughReplicasException, PolicyViolationException, StaleBrokerEpochException}
 import org.apache.kafka.common.metrics.Metrics
@@ -42,6 +42,8 @@ import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.Code
 import org.apache.kafka.server.policy.CreateTopicPolicy
 
+import java.time.Duration
+import java.util.Properties
 import scala.collection.JavaConverters._
 import scala.collection.{Map, Seq, Set, immutable, mutable}
 import scala.collection.mutable.ArrayBuffer
@@ -1261,15 +1263,28 @@ class KafkaController(val config: KafkaConfig,
     controlledShutdownCallback(controlledShutdownResult)
   }
 
-  private def safeToShutdown(id: Int, brokerEpoch: Long): Boolean = {
-    val topicConfigs = adminZkClient.getAllTopicConfigs()
+  private var topicConfigCache = new BoundedTimedCache[String, Properties](
+    config.controlledShutdownTopicConfigCacheSize,
+    Duration.ofMillis(config.controlledShutdownTopicConfigCacheTTLMs))
 
+  private def fetchTopicConfig(topicName: String): Properties = {
+    val cachedConfig = topicConfigCache.get(topicName)
+    if (cachedConfig != null) {
+      return cachedConfig
+    }
+
+    val config = zkClient.getEntityConfigs(ConfigType.Topic, topicName)
+    topicConfigCache.put(topicName, config)
+    return config
+  }
+
+  private def safeToShutdown(id: Int, brokerEpoch: Long): Boolean = {
     // If a topic doesn't have min.insync.replicas configured, default to 1
     val defaultMinISR: Int = 1
 
     val atRiskPartitions = controllerContext.partitionsOnBroker(id).filter { partition =>
       // Look up minISR for this topic, or use the default if not configured.
-      val minISR: Int = topicConfigs.get(partition.topic()).map(_.get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG)) match {
+      val minISR: Int = fetchTopicConfig(partition.topic()).get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG) match {
         case Some(minISR) => minISR.toString.toInt
         case None => defaultMinISR
       }
@@ -1280,6 +1295,7 @@ class KafkaController(val config: KafkaConfig,
       })
 
       // Consider this topic-partition at-risk if removing one broker will result in the ISR shrinking below minISR
+      debug(s"Broker $id (epoch $brokerEpoch) has $liveReplicas live replicas and $partition has min.insync.replicas=$minISR")
       (liveReplicas - 1) < minISR
     }
 
@@ -1303,7 +1319,8 @@ class KafkaController(val config: KafkaConfig,
       }
     }
 
-    if (!safeToShutdown(id, brokerEpoch)) {
+    if (config.controlledShutdownSafetyCheckEnable && !safeToShutdown(id, brokerEpoch)) {
+      info(s"Controlled shutdown safety has prevented broker $id (broker epoch $brokerEpoch) from shutting down.")
       throw new NotEnoughReplicasException(
         s"Broker id $id cannot initiate shutdown without an impact on topic availability.")
     }
