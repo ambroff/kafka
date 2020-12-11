@@ -542,7 +542,8 @@ class ControllerIntegrationTest extends ZooKeeperTestHarness {
     val topic = "test"
     val partition = 0
     // create brokers
-    val serverConfigs = TestUtils.createBrokerConfigs(3, zkConnect, false).map(KafkaConfig.fromProps)
+    val serverConfigs = TestUtils.createBrokerConfigs(3, zkConnect, false, enableControlledShutdownSafetyCheck = true)
+      .map(KafkaConfig.fromProps)
     servers = serverConfigs.reverseMap(s => TestUtils.createServer(s))
 
     // create the topic with min ISR of 2, which should allow one broker to shut down but should block subsequent

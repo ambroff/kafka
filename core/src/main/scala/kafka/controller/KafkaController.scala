@@ -1280,14 +1280,13 @@ class KafkaController(val config: KafkaConfig,
 
   private def safeToShutdown(id: Int, brokerEpoch: Long): Boolean = {
     // If a topic doesn't have min.insync.replicas configured, default to 1
-    val defaultMinISR: Int = 1
+    val defaultMinISRPropertyValue = "1"
 
     val atRiskPartitions = controllerContext.partitionsOnBroker(id).filter { partition =>
       // Look up minISR for this topic, or use the default if not configured.
-      val minISR: Int = fetchTopicConfig(partition.topic()).get(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG) match {
-        case Some(minISR) => minISR.toString.toInt
-        case None => defaultMinISR
-      }
+      val minISR: Int = fetchTopicConfig(partition.topic())
+        .getOrDefault(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, defaultMinISRPropertyValue)
+        .toString.toInt
 
       // See which replicas are known alive and not pending shutdown for this partition
       val liveReplicas = controllerContext.partitionReplicaAssignment(partition).count( { replicaBrokerId =>
