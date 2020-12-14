@@ -1333,7 +1333,7 @@ class KafkaController(val config: KafkaConfig,
 
     info(s"Shutting down broker $id")
 
-    zkClient.recordBrokerShutdown(id, brokerEpoch)
+    zkClient.recordBrokerShutdown(id, brokerEpoch, controllerContext.epochZkVersion)
     controllerContext.shuttingDownBrokerIds += (id -> brokerEpoch)
     debug(s"All shutting down brokers: ${controllerContext.shuttingDownBrokerIds.mkString(",")}")
     debug(s"Live brokers: ${controllerContext.liveBrokerIds.mkString(",")}")

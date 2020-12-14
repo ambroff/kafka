@@ -477,7 +477,7 @@ class KafkaZkClient private[zk] (zooKeeperClient: ZooKeeperClient, isSecure: Boo
           case Code.OK =>
             brokerId -> BrokerShutdownIdZNode.decode(getDataResponse.data)
           case Code.NONODE =>
-            brokerId -> -1
+            brokerId -> -1L
           case _ => throw getDataResponse.resultException.get
         }
       })
@@ -487,10 +487,9 @@ class KafkaZkClient private[zk] (zooKeeperClient: ZooKeeperClient, isSecure: Boo
   /*
    * Record that @brokerId has started the controlled shutdown process at @brokerEpoch.
    */
-  def recordBrokerShutdown(brokerId: Int, brokerEpoch: Long): Unit = {
+  def recordBrokerShutdown(brokerId: Int, brokerEpoch: Long, expectedControllerEpochZkVersion: Int): Unit = {
     val setDataRequest = SetDataRequest(
-      BrokerShutdownIdZNode.path(brokerId), BrokerShutdownIdZNode.encode(brokerEpoch), ZkVersion.MatchAnyVersion)
-    // FIXME: CAS with zk version of this znode to prevent split-brain
+      BrokerShutdownIdZNode.path(brokerId), BrokerShutdownIdZNode.encode(brokerEpoch), expectedControllerEpochZkVersion)
     retryRequestUntilConnected(setDataRequest)
   }
 
