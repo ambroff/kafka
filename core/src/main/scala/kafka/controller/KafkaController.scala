@@ -866,7 +866,7 @@ class KafkaController(val config: KafkaConfig,
           controllerContext.partitionsBeingReassigned.add(topicPartition)
     }
     controllerContext.partitionLeadershipInfo.clear()
-    controllerContext.shuttingDownBrokerIds = Map.empty // FIXME: Load this from zookeeper.
+    controllerContext.shuttingDownBrokerIds = zkClient.getBrokerShutdownEntries
     // register broker modifications handlers
     registerBrokerModificationsHandler(controllerContext.liveOrShuttingDownBrokerIds)
     // update the leader and isr cache for all existing partitions from Zookeeper
@@ -1328,12 +1328,12 @@ class KafkaController(val config: KafkaConfig,
         s"Broker id $id cannot initiate shutdown without an impact on topic availability.")
     }
 
-    info(s"Shutting down broker $id")
-
     if (!controllerContext.liveOrShuttingDownBrokerIds.contains(id))
       throw new BrokerNotAvailableException(s"Broker id $id does not exist.")
 
-    // FIXME: persist this?
+    info(s"Shutting down broker $id")
+
+    zkClient.recordBrokerShutdown(id, brokerEpoch)
     controllerContext.shuttingDownBrokerIds += (id -> brokerEpoch)
     debug(s"All shutting down brokers: ${controllerContext.shuttingDownBrokerIds.mkString(",")}")
     debug(s"Live brokers: ${controllerContext.liveBrokerIds.mkString(",")}")

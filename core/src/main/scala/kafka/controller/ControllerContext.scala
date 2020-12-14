@@ -203,7 +203,7 @@ class ControllerContext {
   }
 
   // getter
-  def liveBrokerIds: Set[Int] = liveBrokerEpochs.keySet -- shuttingDownBrokerIds.keySet
+  def liveBrokerIds: Set[Int] = liveBrokerEpochs.filter(b => b._2 > (shuttingDownBrokerIds.getOrElse(b._1, -1): Long)).keySet
   def liveOrShuttingDownBrokerIds: Set[Int] = liveBrokerEpochs.keySet
   def liveOrShuttingDownBrokers: Set[Broker] = liveBrokers
   def liveBrokerIdAndEpochs: Map[Int, Long] = liveBrokerEpochs
