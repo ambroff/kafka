@@ -181,6 +181,9 @@ class ControllerContext {
     liveBrokers = liveBrokers ++ brokerAndEpochs.keySet
     liveBrokerEpochs = liveBrokerEpochs ++
       (brokerAndEpochs map { case (broker, brokerEpoch) => (broker.id, brokerEpoch)})
+
+    shuttingDownBrokerIds = shuttingDownBrokerIds.filter(b =>
+      liveBrokerEpochs.contains(b._1) && b._2 < liveBrokerEpochs(b._1))
   }
 
   def removeLiveBrokers(brokerIds: Set[Int]): Unit = {
