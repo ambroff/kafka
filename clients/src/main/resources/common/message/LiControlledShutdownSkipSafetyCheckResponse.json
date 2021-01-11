@@ -16,8 +16,8 @@
 {
   "apiKey": 1000,
   "type": "response",
-  "name": "ControlledShutdownSkipSafetyCheckResponse",
-  "validVersions": "0",
+  "name": "LiControlledShutdownSkipSafetyCheckResponse",
+  "validVersions": "0-1",
   "flexibleVersions": "0+",
   "fields": [
     { "name": "ErrorCode", "type": "int16", "versions": "0+",

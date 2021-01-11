@@ -16,8 +16,8 @@
 {
   "apiKey": 1000,
   "type": "request",
-  "name": "ControlledShutdownSkipSafetyCheckRequest",
-  "validVersions": "0",
+  "name": "LiControlledShutdownSkipSafetyCheckRequest",
+  "validVersions": "0-1",
   "flexibleVersions": "0+",
   "fields": [
     { "name": "BrokerId", "type": "int32", "versions": "0+", "entityType": "brokerId",
