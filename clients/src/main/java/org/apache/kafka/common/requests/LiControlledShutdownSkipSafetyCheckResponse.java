@@ -16,7 +16,7 @@
  */
 package org.apache.kafka.common.requests;
 
-import org.apache.kafka.common.message.ControlledShutdownSkipSafetyCheckResponseData;
+import org.apache.kafka.common.message.LiControlledShutdownSkipSafetyCheckResponseData;
 import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.protocol.types.Struct;
@@ -25,21 +25,21 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
 
-public class ControlledShutdownSkipSafetyCheckResponse extends AbstractResponse {
+public class LiControlledShutdownSkipSafetyCheckResponse extends AbstractResponse {
     /**
      * Possible error codes:
      * <p>
      * UNKNOWN(-1) (this is because IllegalStateException may be thrown in `KafkaController.shutdownBroker`, it would be good to improve this)
      * STALE_CONTROLLER_EPOCH(11)
      */
-    private final ControlledShutdownSkipSafetyCheckResponseData data;
+    private final LiControlledShutdownSkipSafetyCheckResponseData data;
 
-    public ControlledShutdownSkipSafetyCheckResponse(ControlledShutdownSkipSafetyCheckResponseData data) {
+    public LiControlledShutdownSkipSafetyCheckResponse(LiControlledShutdownSkipSafetyCheckResponseData data) {
         this.data = data;
     }
 
-    public ControlledShutdownSkipSafetyCheckResponse(Struct struct, short version) {
-        this.data = new ControlledShutdownSkipSafetyCheckResponseData(struct, version);
+    public LiControlledShutdownSkipSafetyCheckResponse(Struct struct, short version) {
+        this.data = new LiControlledShutdownSkipSafetyCheckResponseData(struct, version);
     }
 
     public Errors error() {
@@ -56,19 +56,19 @@ public class ControlledShutdownSkipSafetyCheckResponse extends AbstractResponse 
         return data.toStruct(version);
     }
 
-    public ControlledShutdownSkipSafetyCheckResponseData data() {
+    public LiControlledShutdownSkipSafetyCheckResponseData data() {
         return data;
     }
 
-    public static ControlledShutdownSkipSafetyCheckResponse parse(ByteBuffer buffer, short version) {
-        return new ControlledShutdownSkipSafetyCheckResponse(
-            ApiKeys.CONTROLLED_SHUTDOWN_SKIP_SAFETY_CHECK.parseResponse(version, buffer),
+    public static LiControlledShutdownSkipSafetyCheckResponse parse(ByteBuffer buffer, short version) {
+        return new LiControlledShutdownSkipSafetyCheckResponse(
+            ApiKeys.LI_CONTROLLED_SHUTDOWN_SKIP_SAFETY_CHECK.parseResponse(version, buffer),
             version);
     }
 
-    public static ControlledShutdownSkipSafetyCheckResponse prepareResponse(Errors error) {
-        ControlledShutdownSkipSafetyCheckResponseData data = new ControlledShutdownSkipSafetyCheckResponseData();
+    public static LiControlledShutdownSkipSafetyCheckResponse prepareResponse(Errors error) {
+        LiControlledShutdownSkipSafetyCheckResponseData data = new LiControlledShutdownSkipSafetyCheckResponseData();
         data.setErrorCode(error.code());
-        return new ControlledShutdownSkipSafetyCheckResponse(data);
+        return new LiControlledShutdownSkipSafetyCheckResponse(data);
     }
 }
