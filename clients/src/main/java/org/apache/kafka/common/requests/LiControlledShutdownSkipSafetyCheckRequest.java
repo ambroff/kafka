@@ -75,4 +75,8 @@ public class LiControlledShutdownSkipSafetyCheckRequest extends AbstractRequest 
         return new LiControlledShutdownSkipSafetyCheckRequest(
             ApiKeys.LI_CONTROLLED_SHUTDOWN_SKIP_SAFETY_CHECK.parseRequest(version, buffer), version);
     }
+
+    public LiControlledShutdownSkipSafetyCheckRequestData data() {
+        return data;
+    }
 }
