@@ -3195,6 +3195,7 @@ public class KafkaAdminClient extends AdminClient {
     public SkipShutdownSafetyCheckResult skipShutdownSafetyCheck(SkipShutdownSafetyCheckOptions options) {
         final KafkaFutureImpl<Void> future = new KafkaFutureImpl<>();
         final long now = time.milliseconds();
+
         runnable.call(new Call("skipShutdownSafetyCheck", calcDeadlineMs(now, options.timeoutMs()),
             new ControllerNodeProvider()) {
 
