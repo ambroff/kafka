@@ -1300,7 +1300,7 @@ class KafkaController(val config: KafkaConfig,
     if (!controllerContext.liveOrShuttingDownBrokerIds.contains(id))
       throw new BrokerNotAvailableException(s"Broker id $id does not exist.")
 
-    controllerContext.skipShutdownSafetyCheck += (id, brokerEpoch)
+    controllerContext.skipShutdownSafetyCheck += (id -> brokerEpoch)
   }
 
   private def safeToShutdown(id: Int, brokerEpoch: Long): Boolean = {
@@ -1353,7 +1353,7 @@ class KafkaController(val config: KafkaConfig,
       else brokerEpoch
 
     if (config.controlledShutdownSafetyCheckEnable && !safeToShutdown(id, actualBrokerEpoch)) {
-      if (controllerContext.skipShutdownSafetyCheck.getOrElse(id, -1) >= actualBrokerEpoch) {
+      if (controllerContext.skipShutdownSafetyCheck.getOrElse(id, -1L) >= actualBrokerEpoch) {
         info(s"Controlled shutdown safety check has been skipped for broker $id (broker epoch $actualBrokerEpoch). Allowing shutdown even though it is not safe to do so.")
       } else {
         info(s"Controlled shutdown safety has prevented broker $id (broker epoch $actualBrokerEpoch) from shutting down.")
